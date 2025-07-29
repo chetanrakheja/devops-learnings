@@ -1,0 +1,45 @@
+# version: (obsoete)
+name: blog-app  #if not give your folder(where docker file is present) name will become the name of the docker execution - this name will be used as prefix in all the networks, volumes etc , try it to be unique
+
+services:
+  blog-db:
+    image: 'mysql'
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} # we dont give passwords for prod , it is not good practice, we are using env variable in this case
+      # we can define env in shell using `export <variablename>=<value>`
+    volumes:
+      - blog-db-vol:/var/lib/mysql
+    ports:
+      - '3306:3306'
+    networks:
+      - blog-app-net
+
+  blog-server:
+    # in this case we are using existing dockerfile to create image
+    # image: '' 
+    build:
+      dockerfile: Dockerfile
+      context: "./" # filepath of dockerfile (useful when multiple dockerfile exists)
+    container_name: blog-app-container
+    ports:
+      - '3001:3000'
+    env_file:
+      - ./.env
+    volumes:
+      - ./:/app # binding currenty folder with /app in docker 
+    depends_on:
+      - blog-db
+    networks:
+      - blog-app-net
+    
+volumes:
+# it is not list but key value pair (read docs for advance knowledge)
+  blog-db-vol:
+
+networks:
+  blog-app-net:
+  
+
+
+
+

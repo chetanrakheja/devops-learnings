@@ -1,0 +1,71 @@
+
+services:
+  blog-db:
+    image: 'mysql'
+    deploy:
+      placement:
+        constraints:
+          - node.role = worker
+          - node.label = singapore
+      replicas: 1
+      update_config:
+        order: start-first # this will first start new version than stop the older version
+        failure_action: rollback # in case latest version dont work it will start using older version
+        delay: 10s
+      rollback_config:
+        parallelism: 1 # this will stop one container at once roll it back and then will do the remaining work 
+        order: start-first
+    healthcheck:
+      test: ['CMD','mysqladmin','ping','-h','localhost'] # this  script will get executed within container
+      interval: 10s # this will check health api every 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} # we dont give passwords for prod , it is not good practice, we are using env variable in this case
+      # we can define env in shell using `export <variablename>=<value>`
+    volumes:
+      - blog-db-vol:/var/lib/mysql
+    ports:
+      - '3306:3306'
+    networks:
+      - blog-app-net
+
+  blog-server:
+    # in this case we are using existing dockerfile to create image
+    image: 'codersgyan/blog-app:v1' 
+    deploy:
+      replicas: 1
+      update_config:
+        order: start-first # this will first start new version than stop the older version
+        failure_action: rollback # in case latest version dont work it will start using older version
+        delay: 10s
+      rollback_config:
+        parallelism: 1 # this will stop one container at once roll it back and then will do the remaining work 
+        order: start-first
+    healthcheck:
+      test: ['CMD','wget','--no-verbose', '--tries=1','spider','http:localhost:3000/health'] # this  script will get executed within container
+      interval: 10s # this will check health api every 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - '3001:3000'
+    environment:
+      - NODE_HOST=v1
+    volumes:
+      - ./:/app # binding currenty folder with /app in docker 
+    depends_on:
+      - blog-db
+    networks:
+      - blog-app-net
+    
+volumes:
+# it is not list but key value pair (read docs for advance knowledge)
+  blog-db-vol:
+
+networks:
+  blog-app-net:
+  
+
+
+
+
